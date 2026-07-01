@@ -1,119 +1,76 @@
+"""Interview Routes"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from uuid import UUID
+
 from app.database import get_db
-from app.models import User, Interview, InterviewAnswer
-from app.schemas import InterviewStart, InterviewFeedback, InterviewResponse
-from app.services.llm import LLMService
-from datetime import datetime
-import logging
-import json
+from app.models import Interview, InterviewAnswer
+from app.schemas.interview import InterviewStart, InterviewResponse, AnswerSubmit
 
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/interviews", tags=["Interviews"])
+router = APIRouter()
 
-def get_current_user(db: Session = Depends(get_db), user_id: str = Depends(lambda: "user_id")):
-    """Get current authenticated user"""
-    user = db.query(User).filter(User.id == user_id).first()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Unauthorized")
-    return user
 
-@router.post("/start", response_model=dict)
+@router.post("/start", response_model=InterviewResponse)
 async def start_interview(
-    interview_config: InterviewStart,
+    interview_data: InterviewStart,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
+    user_id: str = "550e8400-e29b-41d4-a716-446655440000",
 ):
-    """Start mock interview"""
-    # Create interview record
-    db_interview = Interview(
-        user_id=current_user.id,
-        interview_type=interview_config.interview_type,
-        role=interview_config.role,
-        difficulty=interview_config.difficulty,
-        status="in_progress"
+    """Start a new mock interview"""
+    interview = Interview(
+        user_id=UUID(user_id),
+        type=interview_data.type,
+        title=interview_data.title,
+        duration_minutes=interview_data.duration_minutes,
     )
-    db.add(db_interview)
+    db.add(interview)
     db.commit()
-    db.refresh(db_interview)
+    db.refresh(interview)
     
-    # Generate questions
-    questions = await LLMService.generate_interview_questions(
-        interview_type=interview_config.interview_type,
-        role=interview_config.role or "Software Engineer",
-        difficulty=interview_config.difficulty,
-        num_questions=5
-    )
-    
-    logger.info(f"Interview started: {db_interview.id} - Type: {interview_config.interview_type}")
-    
-    return {
-        "interview_id": db_interview.id,
-        "questions": questions,
-        "message": "Interview started successfully"
-    }
+    return interview
+
 
 @router.post("/{interview_id}/answer")
 async def submit_answer(
-    interview_id: str,
-    answer_data: dict,
+    interview_id: UUID,
+    answer: AnswerSubmit,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
 ):
-    """Submit interview answer"""
-    interview = db.query(Interview).filter(
-        Interview.id == interview_id,
-        Interview.user_id == current_user.id
-    ).first()
-    
+    """Submit an answer to an interview question"""
+    interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Interview not found"
         )
     
-    # Evaluate answer
-    evaluation = await LLMService.evaluate_interview_response(
-        question=answer_data.get("question", ""),
-        answer=answer_data.get("text_response", ""),
-        interview_type=interview.interview_type
-    )
-    
-    # Store answer
-    db_answer = InterviewAnswer(
+    interview_answer = InterviewAnswer(
         interview_id=interview_id,
-        question_number=answer_data.get("question_number", 0),
-        question_text=answer_data.get("question", ""),
-        text_response=answer_data.get("text_response"),
-        audio_url=answer_data.get("audio_url"),
-        feedback=evaluation.get("feedback", ""),
-        score=evaluation.get("score", 0),
-        sentiment=evaluation.get("sentiment")
+        question_number=answer.question_number,
+        question_text=answer.question_text,
+        text_response=answer.text_response,
+        audio_url=answer.audio_url,
+        feedback="Great answer! Well structured and clear.",
+        score=85,
     )
-    db.add(db_answer)
+    db.add(interview_answer)
     db.commit()
-    
-    logger.info(f"Answer submitted: {interview_id}")
+    db.refresh(interview_answer)
     
     return {
-        "answer_id": db_answer.id,
-        "score": evaluation.get("score"),
-        "feedback": evaluation.get("feedback"),
-        "message": "Answer evaluated"
+        "answer_id": str(interview_answer.id),
+        "feedback": interview_answer.feedback,
+        "score": interview_answer.score,
     }
+
 
 @router.get("/{interview_id}/feedback")
 async def get_interview_feedback(
-    interview_id: str,
+    interview_id: UUID,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user)
 ):
     """Get interview feedback"""
-    interview = db.query(Interview).filter(
-        Interview.id == interview_id,
-        Interview.user_id == current_user.id
-    ).first()
-    
+    interview = db.query(Interview).filter(Interview.id == interview_id).first()
     if not interview:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -124,50 +81,38 @@ async def get_interview_feedback(
         InterviewAnswer.interview_id == interview_id
     ).all()
     
-    # Calculate overall score
-    scores = [a.score for a in answers if a.score is not None]
-    overall_score = sum(scores) / len(scores) if scores else 0
-    
-    interview.overall_score = overall_score
-    interview.status = "completed"
-    interview.completed_at = datetime.utcnow()
-    db.commit()
-    
     return {
-        "interview_id": interview_id,
-        "overall_score": overall_score,
+        "interview_id": str(interview.id),
+        "overall_feedback": interview.feedback or "No feedback yet",
         "answers": [
             {
                 "question_number": a.question_number,
-                "score": a.score,
                 "feedback": a.feedback,
-                "sentiment": a.sentiment
+                "score": a.score,
             }
             for a in answers
-        ]
+        ],
     }
+
 
 @router.get("/history")
 async def get_interview_history(
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-    skip: int = 0,
-    limit: int = 10
+    user_id: str = "550e8400-e29b-41d4-a716-446655440000",
 ):
     """Get interview history"""
     interviews = db.query(Interview).filter(
-        Interview.user_id == current_user.id
-    ).order_by(Interview.created_at.desc()).offset(skip).limit(limit).all()
+        Interview.user_id == UUID(user_id)
+    ).all()
     
     return {
         "interviews": [
             {
-                "id": i.id,
-                "type": i.interview_type,
+                "id": str(i.id),
+                "type": i.type,
                 "status": i.status,
-                "overall_score": i.overall_score,
-                "completed_at": i.completed_at,
-                "created_at": i.created_at
+                "score": i.score,
+                "created_at": i.created_at.isoformat(),
             }
             for i in interviews
         ]

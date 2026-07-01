@@ -1,91 +1,106 @@
+"""Authentication Routes"""
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
+from datetime import datetime, timedelta
+from typing import Optional
+import jwt
+from passlib.context import CryptContext
+
 from app.database import get_db
 from app.models import User
-from app.schemas import UserCreate, UserResponse, TokenResponse, TokenRequest
-from app.utils.security import get_password_hash, verify_password, create_access_token, create_refresh_token, decode_token
-from datetime import timedelta
-import logging
+from app.schemas.user import UserRegister, UserLogin, UserResponse
+from app.config import settings
 
-logger = logging.getLogger(__name__)
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter()
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def hash_password(password: str) -> str:
+    """Hash password"""
+    return pwd_context.hash(password)
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify password"""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Create JWT access token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def register(user_data: UserCreate, db: Session = Depends(get_db)):
-    """Register new user"""
-    # Check if user exists
-    existing_user = db.query(User).filter(User.email == user_data.email).first()
+async def register(user: UserRegister, db: Session = Depends(get_db)):
+    """Register a new user"""
+    existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Email already registered"
         )
     
-    # Create new user
     db_user = User(
-        email=user_data.email,
-        password_hash=get_password_hash(user_data.password),
-        first_name=user_data.first_name,
-        last_name=user_data.last_name
+        email=user.email,
+        password_hash=hash_password(user.password),
+        first_name=user.first_name,
+        last_name=user.last_name,
     )
     db.add(db_user)
     db.commit()
     db.refresh(db_user)
-    
-    logger.info(f"User registered: {user_data.email}")
     return db_user
 
-@router.post("/login", response_model=TokenResponse)
-async def login(credentials: TokenRequest, db: Session = Depends(get_db)):
+
+@router.post("/login")
+async def login(user: UserLogin, db: Session = Depends(get_db)):
     """User login"""
-    user = db.query(User).filter(User.email == credentials.email).first()
+    db_user = db.query(User).filter(User.email == user.email).first()
     
-    if not user or not verify_password(credentials.password, user.password_hash):
+    if not db_user or not verify_password(user.password, db_user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid credentials"
         )
     
-    if not user.is_active:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="User account is disabled"
-        )
-    
-    # Create tokens
-    access_token = create_access_token({"sub": user.id})
-    refresh_token = create_refresh_token({"sub": user.id})
-    
-    logger.info(f"User login: {credentials.email}")
+    access_token = create_access_token(data={"sub": str(db_user.id)})
+    refresh_token = create_access_token(
+        data={"sub": str(db_user.id)},
+        expires_delta=timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    )
     
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
-        "token_type": "bearer"
+        "token_type": "bearer",
+        "user": UserResponse.from_orm(db_user),
     }
 
-@router.post("/refresh", response_model=TokenResponse)
-async def refresh_token(token: str):
+
+@router.post("/refresh")
+async def refresh_token(refresh_token: str):
     """Refresh access token"""
-    payload = decode_token(token)
-    
-    if not payload or payload.get("type") != "refresh":
+    try:
+        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id = payload.get("sub")
+    except jwt.InvalidTokenError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid refresh token"
         )
     
-    user_id = payload.get("sub")
-    access_token = create_access_token({"sub": user_id})
-    
-    return {
-        "access_token": access_token,
-        "refresh_token": token,
-        "token_type": "bearer"
-    }
+    access_token = create_access_token(data={"sub": user_id})
+    return {"access_token": access_token, "token_type": "bearer"}
 
-@router.post("/logout", status_code=status.HTTP_200_OK)
-async def logout(current_user_id: str = Depends(lambda token: decode_token(token).get("sub") if decode_token(token) else None)):
+
+@router.post("/logout")
+async def logout():
     """User logout"""
-    logger.info(f"User logout: {current_user_id}")
     return {"message": "Logged out successfully"}
