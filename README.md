@@ -6,232 +6,368 @@ A comprehensive AI-powered interview coaching platform that helps candidates pre
 
 - **Resume Upload & ATS Scoring** - Analyze resumes with AI-powered ATS scoring
 - **Mock Interviews** - AI-generated technical and behavioral interview questions
-- **Coding Question Recommendations** - Personalized coding challenges based on role
+- **Coding Question Recommendations** - Personalized coding challenges by difficulty
 - **Speech/Text Feedback** - Real-time feedback on interview responses
-- **Personalized Learning Roadmap** - Adaptive learning paths based on performance
 - **Analytics Dashboard** - Track progress and improvement over time
+- **Personalized Learning Roadmap** - Adaptive learning paths based on performance
 
 ## 🏗️ Tech Stack
 
 ### Backend
-- **Python 3.10+** with FastAPI
+- **Python 3.11** with FastAPI
 - **PostgreSQL** - Primary database
 - **Redis** - Caching and session management
-- **OpenAI API** - LLM integration for question generation and feedback
+- **SQLAlchemy** - ORM for database operations
 - **Pydantic** - Data validation
+- **JWT** - Secure authentication
 
 ### Frontend
-- **Next.js 14** - React framework
+- **Next.js 14** - React framework with App Router
 - **TypeScript** - Type safety
-- **Tailwind CSS** - Styling
-- **ShadcN/UI** - Component library
-- **Zustand** - State management
+- **Tailwind CSS** - Utility-first styling
+- **Zustand** - Lightweight state management
+- **Axios** - HTTP client
+- **React Hot Toast** - Notifications
 
 ### Infrastructure
 - **Docker** - Containerization
 - **Docker Compose** - Multi-container orchestration
-- **PostgreSQL** - Database
-- **Redis** - In-memory cache
+- **PostgreSQL 15** - Database
+- **Redis 7** - In-memory cache
 
 ## 📁 Project Structure
 
 ```
 ai-interview-platform/
-├── backend/                 # FastAPI backend
+├── backend/
 │   ├── app/
-│   │   ├── __init__.py
-│   │   ├── main.py
-│   │   ├── config.py
-│   │   ├── models/         # Pydantic models
-│   │   ├── schemas/        # Database schemas
-│   │   ├── routes/         # API endpoints
-│   │   ├── services/       # Business logic
-│   │   ├── utils/          # Utilities
-│   │   └── middleware/     # Custom middleware
-│   ├── alembic/            # Database migrations
-│   ├── tests/
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── .env.example
-├── frontend/               # Next.js frontend
+│   │   ├── main.py              # FastAPI entry point
+│   │   ├── config.py            # Configuration settings
+│   │   ├── database.py          # Database setup
+│   │   ├── models/              # SQLAlchemy models
+│   │   ├── schemas/             # Pydantic schemas
+│   │   ├── routes/              # API endpoints
+│   │   ├── services/            # Business logic
+│   │   └── utils/               # Utility functions
+│   ├── tests/                   # Test suite
+│   ├── requirements.txt         # Python dependencies
+│   ├── Dockerfile              # Backend container
+│   └── .env.example            # Environment template
+├── frontend/
 │   ├── src/
-│   │   ├── app/           # App directory
-│   │   ├── components/    # React components
-│   │   ├── pages/
-│   │   ├── hooks/
-│   │   ├── lib/
-│   │   ├── styles/
-│   │   └── types/
-│   ├── public/
-│   ├── package.json
-│   ├── tsconfig.json
-│   ├── tailwind.config.js
-│   ├── Dockerfile
-│   └── .env.local.example
-├── docker-compose.yml
-├── .github/
-│   └── workflows/         # CI/CD workflows
-├── docs/                  # Documentation
-└── .gitignore
+│   │   ├── app/                # Next.js pages
+│   │   ├── components/         # React components
+│   │   ├── lib/                # Utilities (API, store)
+│   │   └── styles/             # Global styles
+│   ├── package.json            # Node dependencies
+│   ├── Dockerfile             # Frontend container
+│   └── .env.local.example     # Environment template
+├── docker-compose.yml         # Container orchestration
+└── README.md                  # This file
 ```
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Recommended)
 
 ### Prerequisites
-- Docker & Docker Compose
-- Python 3.10+
-- Node.js 18+
-- PostgreSQL 14+
-- Redis 7+
+- Docker & Docker Compose installed
+- Git installed
 
-### Development Setup
+### Installation Steps
 
 1. **Clone the repository**
-   ```bash
-   git clone https://github.com/chakradharrakhonde/ai-interview-platform.git
-   cd ai-interview-platform
-   ```
+```bash
+git clone https://github.com/chakradharrakhonde/ai-interview-platform.git
+cd ai-interview-platform
+```
 
 2. **Create environment files**
-   ```bash
-   cp backend/.env.example backend/.env
-   cp frontend/.env.local.example frontend/.env.local
-   ```
+```bash
+cp backend/.env.example backend/.env
+cp frontend/.env.local.example frontend/.env.local
+```
 
-3. **Update environment variables**
-   ```bash
-   # backend/.env
-   OPENAI_API_KEY=your_key_here
-   DATABASE_URL=postgresql://user:password@localhost:5432/interview_db
-   REDIS_URL=redis://localhost:6379
-   SECRET_KEY=your_secret_key_here
-   ```
+3. **Update backend environment (optional)**
+```bash
+# Edit backend/.env
+DATABASE_URL=postgresql://interview_user:interview_password@postgres:5432/interview_db
+REDIS_URL=redis://redis:6379
+SECRET_KEY=your-super-secret-key-here
+OPENAI_API_KEY=sk-your-openai-key-here  # Optional for demo
+ENVIRONMENT=development
+DEBUG=True
+```
 
-4. **Start services with Docker Compose**
-   ```bash
-   docker-compose up -d
-   ```
+4. **Start all services**
+```bash
+docker-compose up -d
+```
 
-5. **Run database migrations**
-   ```bash
-   docker-compose exec backend alembic upgrade head
-   ```
+5. **Verify services are running**
+```bash
+# Check container status
+docker-compose ps
 
-6. **Access the application**
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - API Docs: http://localhost:8000/docs
+# Access the application
+# Frontend: http://localhost:3000
+# Backend API: http://localhost:8000
+# API Docs: http://localhost:8000/docs
+```
+
+## 🛠️ Local Development (Without Docker)
+
+### Backend Setup
+
+```bash
+# Navigate to backend directory
+cd backend
+
+# Create virtual environment
+python -m venv venv
+
+# Activate virtual environment
+# On Windows:
+venv\Scripts\activate
+# On macOS/Linux:
+source venv/bin/activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Create .env file
+cp .env.example .env
+
+# Run the application
+uvicorn app.main:app --reload
+# Server runs on http://localhost:8000
+```
+
+### Frontend Setup
+
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Create .env.local file
+cp .env.local.example .env.local
+
+# Run development server
+npm run dev
+# Application runs on http://localhost:3000
+```
 
 ## 📚 API Documentation
 
-### Authentication
-- POST `/api/v1/auth/register` - Register new user
-- POST `/api/v1/auth/login` - User login
-- POST `/api/v1/auth/refresh` - Refresh token
-- POST `/api/v1/auth/logout` - User logout
+Once the backend is running, visit:
+- **Interactive Docs**: http://localhost:8000/docs
+- **ReDoc**: http://localhost:8000/redoc
 
-### Resume Management
-- POST `/api/v1/resumes/upload` - Upload resume
-- GET `/api/v1/resumes/{resume_id}` - Get resume
-- DELETE `/api/v1/resumes/{resume_id}` - Delete resume
-- POST `/api/v1/resumes/{resume_id}/score` - Get ATS score
+### Key Endpoints
 
-### Mock Interviews
-- POST `/api/v1/interviews/start` - Start mock interview
-- POST `/api/v1/interviews/{interview_id}/answer` - Submit answer
-- GET `/api/v1/interviews/{interview_id}/feedback` - Get feedback
-- GET `/api/v1/interviews/history` - Interview history
+#### Authentication
+- `POST /api/v1/auth/register` - Register new user
+- `POST /api/v1/auth/login` - User login
+- `POST /api/v1/auth/refresh` - Refresh token
+- `POST /api/v1/auth/logout` - User logout
 
-### Coding Questions
-- GET `/api/v1/coding/questions` - Get recommended questions
-- GET `/api/v1/coding/questions/{question_id}` - Get question details
-- POST `/api/v1/coding/submit` - Submit solution
+#### Resume Management
+- `POST /api/v1/resumes/upload` - Upload resume
+- `GET /api/v1/resumes/{resume_id}` - Get resume details
+- `POST /api/v1/resumes/{resume_id}/score` - Get ATS score
+- `DELETE /api/v1/resumes/{resume_id}` - Delete resume
 
-### Learning Roadmap
-- GET `/api/v1/roadmap` - Get personalized roadmap
-- PUT `/api/v1/roadmap/update` - Update roadmap progress
+#### Mock Interviews
+- `POST /api/v1/interviews/start` - Start interview
+- `POST /api/v1/interviews/{interview_id}/answer` - Submit answer
+- `GET /api/v1/interviews/{interview_id}/feedback` - Get feedback
+- `GET /api/v1/interviews/history` - Get interview history
 
-## 🗄️ Database Schema
+#### Coding Questions
+- `GET /api/v1/coding/questions` - Get questions by difficulty
+- `GET /api/v1/coding/questions/{question_id}` - Get question details
+- `POST /api/v1/coding/submit` - Submit code solution
 
-### Users
-- id, email, password_hash, first_name, last_name, created_at, updated_at
-
-### Resumes
-- id, user_id, file_path, ats_score, parsed_data, created_at
-
-### Interviews
-- id, user_id, type, status, feedback, started_at, completed_at
-
-### Interview Answers
-- id, interview_id, question_id, text_response, audio_url, feedback
-
-### Coding Questions
-- id, difficulty, topic, title, description, test_cases
-
-### Learning Roadmap
-- id, user_id, topics, progress, recommendations
+#### Dashboard
+- `GET /api/v1/dashboard/stats` - Get user statistics
+- `GET /api/v1/health` - Health check endpoint
 
 ## 🔐 Security Features
 
 - JWT authentication with access/refresh tokens
 - Password hashing with bcrypt
 - CORS configuration
-- Rate limiting
 - SQL injection prevention via ORM
 - Secure file upload handling
 - Environment-based configuration
+- Rate limiting ready
+
+## 📊 Database Models
+
+### Users
+- Email (unique, indexed)
+- Password hash
+- First/Last name
+- Verification status
+- Timestamps
+
+### Resumes
+- File path and name
+- ATS score
+- Parsed data (JSON)
+- Skills array
+- Experience years
+
+### Interviews
+- Type (behavioral/technical/coding)
+- Status (started/in_progress/completed)
+- Score and feedback
+- Duration tracking
+
+### Coding Questions
+- Title and description
+- Difficulty level
+- Test cases
+- Time/memory limits
 
 ## 🧪 Testing
 
+### Run Backend Tests
 ```bash
-# Run backend tests
-docker-compose exec backend pytest
-
-# Run frontend tests
-docker-compose exec frontend npm test
+cd backend
+pytest                    # Run all tests
+pytest -v               # Verbose output
+pytest --cov           # With coverage report
 ```
 
-## 📊 Performance & Caching
-
-- Redis caching for frequently accessed data
-- Database connection pooling
-- Async operations for long-running tasks
-- Pagination for large datasets
+### Run Frontend Tests
+```bash
+cd frontend
+npm test                # Run all tests
+npm test -- --watch   # Watch mode
+```
 
 ## 🚢 Deployment
 
-### Production Checklist
-- [ ] Environment variables configured
-- [ ] Database backups configured
-- [ ] SSL/TLS certificates setup
-- [ ] Rate limiting configured
-- [ ] Monitoring/logging setup
-- [ ] CI/CD pipelines active
+### Docker Deployment
 
-### Deployment Guides
-- [Docker Deployment](./docs/deployment/docker.md)
-- [AWS Deployment](./docs/deployment/aws.md)
-- [Heroku Deployment](./docs/deployment/heroku.md)
+```bash
+# Build production images
+docker-compose -f docker-compose.yml build
 
-## 📝 API Response Format
-
-All endpoints follow this format:
-
-```json
-{
-  "success": true,
-  "data": {},
-  "message": "Success message",
-  "timestamp": "2024-01-01T00:00:00Z"
-}
+# Run in production mode
+DEBUG=False ENVIRONMENT=production docker-compose up -d
 ```
 
-## 🤝 Contributing
+### Environment Variables for Production
+
+Update these in production:
+- `SECRET_KEY` - Strong random key
+- `DEBUG` - Set to `False`
+- `ENVIRONMENT` - Set to `production`
+- `DATABASE_URL` - Production database URL
+- `OPENAI_API_KEY` - Your OpenAI API key
+
+## 📖 Frontend Pages
+
+- `/` - Landing page
+- `/auth/login` - Login page
+- `/auth/register` - Registration page
+- `/dashboard` - User dashboard with statistics
+- `/resume` - Resume upload and ATS scoring
+- `/interview` - Mock interview practice
+- `/coding` - Coding practice with problems
+
+## 🎨 UI Components
+
+Reusable components in `frontend/src/components/`:
+- `Button` - Customizable button with variants
+- `Input` - Form input with validation
+- `Card` - Container component
+- `Navbar` - Navigation bar
+- `LoginForm` - Authentication form
+- `RegisterForm` - Registration form
+- `ResumeUploader` - Resume upload interface
+- `MockInterview` - Interview practice interface
+
+## 🐛 Troubleshooting
+
+### Port Already in Use
+```bash
+# Change port in docker-compose.yml or use different ports
+docker-compose up -d --scale frontend=0
+```
+
+### Database Connection Error
+```bash
+# Check if PostgreSQL is running
+docker-compose logs postgres
+
+# Rebuild database
+docker-compose down -v
+docker-compose up -d
+```
+
+### API Not Responding
+```bash
+# Check backend logs
+docker-compose logs backend
+
+# Ensure backend is healthy
+docker-compose ps
+```
+
+## 📝 Development Workflow
 
 1. Create a feature branch
-2. Make your changes
-3. Run tests and linting
-4. Submit a pull request
+   ```bash
+   git checkout -b feature/your-feature
+   ```
+
+2. Make changes and test
+   ```bash
+   # Backend changes auto-reload with --reload flag
+   # Frontend changes auto-reload with npm run dev
+   ```
+
+3. Commit changes
+   ```bash
+   git add .
+   git commit -m "Add your feature"
+   ```
+
+4. Push to GitHub
+   ```bash
+   git push origin feature/your-feature
+   ```
+
+5. Create a Pull Request
+
+## 📦 Dependencies
+
+### Backend
+- fastapi - Web framework
+- sqlalchemy - ORM
+- pydantic - Data validation
+- psycopg2 - PostgreSQL adapter
+- redis - Caching
+- python-jose - JWT handling
+- passlib - Password hashing
+
+### Frontend
+- react - UI library
+- next - React framework
+- zustand - State management
+- axios - HTTP client
+- tailwindcss - Styling
+- react-hot-toast - Notifications
+
+## 📞 Support & Contribution
+
+- For issues: Open a GitHub issue
+- For contributions: Submit a pull request
+- For questions: Check the docs folder
 
 ## 📄 License
 
@@ -240,10 +376,6 @@ MIT License - see LICENSE file for details
 ## 👨‍💻 Author
 
 Chakradhar Rakhonde - [@chakradharrakhonde](https://github.com/chakradharrakhonde)
-
-## 📞 Support
-
-For issues and questions, please open an GitHub issue.
 
 ---
 

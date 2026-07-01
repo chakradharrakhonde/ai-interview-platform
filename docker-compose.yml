@@ -1,7 +1,6 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: interview_postgres
@@ -22,7 +21,6 @@ services:
     networks:
       - interview_network
 
-  # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: interview_redis
@@ -39,7 +37,6 @@ services:
     networks:
       - interview_network
 
-  # FastAPI Backend
   backend:
     build:
       context: ./backend
@@ -71,7 +68,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Next.js Frontend
   frontend:
     build:
       context: ./frontend
